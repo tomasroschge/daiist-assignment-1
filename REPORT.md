@@ -1,12 +1,10 @@
 # Assignment 1 Report
 
 - **Name**: Tomás Roschge
-- **Student ID**: <!-- TODO -->
-- **Email**: <!-- TODO -->
-- **Group**: <!-- TODO: BBADBA 5A | BBADBA 5B | PPLEDBA 5A | BDBA 3A -->
+- **Student ID**: 19045
+- **Email**: troschge.ieu2022@student.ie.edu
+- **Group**: BBADBA 5A 
 
-> ✍️ Sections marked **TODO (own words)** must be written by me, the author, per the AI policy.
-> Everything else is a factual description of what the pipeline does and the numbers it produced.
 
 ## Dataset
 
@@ -21,7 +19,7 @@ combinations**, and they match Portugal's yearly figures for 2008–2017 (e.g. u
 GDP −4.06 % in 2012). They therefore identify the **enrollment cohort**, which `pipeline.py` reconstructs
 as a `cohort` column. Students per cohort range from 362 to 571.
 
-**TODO (own words):** why I picked it.
+I picked this dataset because, besides the fact that an analysis with Claude Code determined that it was fit to comply with the objectives of this assignment, the topic really interested me. I believe this kind of analysis are the ones that capture deep patterns that otherwise are hard to find. With a problem as serious as studens dropping out of school, I found this could be very interesting to analyze and, who knows, maybe provide a potential tool for solution.
 
 ## Business / real-life framing
 
@@ -38,7 +36,25 @@ How this framing drives the pipeline:
 | "Enrolled" = still studying at the end of the normal course duration, final outcome unknown | Excluded; target = 1 if Dropout, 0 if Graduate |
 | Errors have asymmetric costs (10:1) | Threshold chosen by minimising €-cost on the validation cohorts, then applied unchanged to test; C chosen by validation log loss |
 
-**TODO (own words):** explain the scenario and why each of these decisions follows from it.
+**The Scenario:** The university has a limited budget for mentorship programmes. At the end of the 1st semester, the model assigns each student a dropout probability, so the university can offer the mentorships to those who are most at risk of dropping out.The result is a list of priorities on who to call.
+
+
+**Why at the end of the first semester?:** The moment the enrollment is made, we only have demographic data stated on the application form, which is not useful to predict behavior (or would be poor indicators and turn out to be a non-representative analysis). On the other hand, at the end of the second semester, a lot of students would have already abandoned and it might be somewhat late to intervene. This is why we choose to do it with data at the end of the first semester; there is representative behavioral data and still time to act. The evidence here lies on the features itself; the 2 with the most weight on the entire model are from the first semester (`s1_failed_units` and `s1_approval_rate`)
+
+**Why take out second semester and tuition/debtor (leakage):** The model can only use what actually exists at the moment of decision. therefore, data from the 2nd semester cannot be used, as the test would look better than how it actually will perform.
+Additionally, we do not know when tuition/debtor were registered, and 94% of the ones who are not up-to-date are dropouts. The inference was made that these are most likely a consequence of the dropout, not a cause or previous signal. 
+AUC dropped from 0.909 to 0.895. Better to have a worst metric that is actually realistic.
+
+**Why a cohort-based split instead of a random one?:** The issue with random split is that it mixes same-year students in train and test. The model would already know the context from those years and metrics would turn out really optimistic. 
+Additionally, the dropout rate between cohort changes between train (42%), validation (33%) and test (34%).Temporal split measures if the model endures that change, while the random split hides it. 
+
+**Why are "enrolled" excluded?:**These are the students who, at the end of the natural period for the bachelor, were still enrolled, so we do not know if they ended up graduating or dropping out. 
+If we chose to identify them as no-droppers, we would be teaching the model that the student advances slowly but doesn't drop out, and that might not be accurate. Excluding them leaves a clear target. 
+
+**Why is the threshold chosen by cost and not by accuracy?:** Errors do not cost the same; a non-detected dropout costs us 3.000€, whilst an unnecessary mentorship costs us 300€.
+Moreover, accuracy treats them equally: with a threshold of 0.5, the model would miss many dropouts to save up some mentorships
+With a ratio of 10:1 in cost, we get 300 / (300 + 3,000) ≈ 0.09. Validation was 0.11 for sklearn. 
+
 
 ## Data preparation & feature engineering
 
@@ -68,7 +84,17 @@ All features are built in `pipeline.engineer_features`. The preprocessor is fitt
 
 Final design matrix: 54 columns.
 
-**TODO (own words):** what didn't work / what I'd tried, and why each choice matters.
+### What didn't work and why each choice matters.
+
+**1. Tuition/debtor:** Tuition was the strongest coefficient out of the whole model, but 94% of those that were not up-to-date were dropouts, so it was possible leakage. By taking them out, AUC decreased from 0.909 to 0.895. A coefficient that dominates that much can be an important alarm. 
+
+**2. Macro columns:** The three macro columns take only 10 distinct combinations, which match Portugal’s yearly figures for 2008–2017, so they identify the enrollment year. Instead of using them as features, they were useful to perform the cohort split. With them as features, the model would learn yearly patterns that cannot be applied to other years. 
+
+**3. Grade = 0:** Means the student did not pass any subject, not a 0/20. It was marked flagged, set as missing and and completed with the median. If not, the model would take it as a real, extremely low grade. 
+
+**4. Honesty disclaimer:** Besides from tuition, I did not test each feature by its own. The next step would be to take out a group of features at a time and test the AUC in validation.
+
+
 
 ## Modeling: three implementations, one model
 
@@ -118,18 +144,35 @@ Largest coefficients (log-odds, same sign and size in all three):
 - **Increase dropout risk:** `s1_failed_units` +1.06, course 9853 +0.57, `mature_student` +0.30, `log_age_at_enrollment` +0.24.
 - **Decrease dropout risk:** `s1_approval_rate` −0.90, `scholarship` −0.50, course 9500 −0.38, `s1_grade` −0.36.
 
-**TODO (own words):** do the three agree? Explain the 95 % vs 100 % decision agreement and the small intercept gap.
-Also: the best model is only €11,700 (9 %) cheaper than mentoring everybody. What that means for the business case.
+### Do the three agree? 
+
+**1. They match:** Probabilities differ by at most 0.0009, coefficients by 0.0018, and the AUC is identical (0.895). The three minimize the loss function (BCE + L2 with lambda = 1/(C-n), without penalizing the bias) over the same data. The problem is convex, so it was a unique optimum.
+
+**2. 95% vs 100%:** It is not that the models differ, it is the threshold choice. With the same threshold they make the same decision for 100% of students. Each chose it on validation, and there a single student (who actually dropped out) has 0.11013 in sklearn and 0.1098 in torch. That unique FN of 3000€ changes the optimal threshold from 0.11 to 0.13. This shows how fragile the threshold is in order to choose it with a tiny validation
+
+**3. Intercept (-0.185 vs -0.188):** There is margin because the one-hot columns of each category add up to 1, same as the bias column. If I increase the intercept and decrease all the coefficients of one categorical variable by the same amount, predictions don't change, only the L2 penalization does (a little). 
+So, the loss function is almost flat in that direction. Both get to the same loss, but stop at different points; sklearn by its solver's tolerance and torch because of the float32 precision. 
+
+**4. Business:** The model costs 114,000€, and mentoring all of the students costs 125,700€. It saves 11,700€ and mentors 58% of students instead of 100%. The model only wins by a small margin because, with a cost of 10:1, not detecting a dropout is so expensive that "mentoring everyone" is a strong baseline. The value of the model lies in NOT MENTORING the 42% with less risk.
+
+- In case the mentorship would be more expensive or if the slots are limited, the model's advantage would grow exponentially. It can be tested by switching the FP value in the dashboard
 
 ## Limitations & next steps
 
-**TODO (own words).**
+**1. Unstable threshold:** Validation has 681 students and one single student moved the threshold. The solution would be to validate with different cohorts on sliding windows (train until year N and validate on N+1, repeating) and average the threshold.
+
+**2. Predicting risk ≠ predicting the effect of mentoring:** The model predicts who drops out, not to whom the mentorship will change the result. The solution would be to implement a random pilot (some students get the mentorship and others don't) to train an uplift model.
+
+**3. Simplified cost:** It ignores that mentoring a TP costs 300€, assumes that the mentorship saves 100% of those who get it, and the costs are estimated. The solution would be to use the programme's real success rate metric of the program and perform a sensitivity analysis (the dashboard already allows or changes in the costs).
+
+**4. Sensitive features:** Gender, nationality, and age could make the model target certain groups more. The solution would be to audit the recall and the rate of targeted students by group, and measure how much it gets lost by taking them out.
 
 ## Generative AI use disclosure
 
-**TODO (own words; edit to be accurate).** Claude Code (Anthropic, Claude Opus) was used to:
-- propose candidate datasets and cost figures; I chose the dataset, framing and costs;
+Claude Code (Anthropic, Claude Opus) was used to:
+- propose and analyse the suitability candidate datasets and cost figures; I chose the dataset, framing and costs;
 - write the code in `pipeline.py`, `train.py` and `app.py`;
 - write the factual/descriptive parts of this report (dataset facts, pipeline description, results tables).
+- build the analytical dashboard
 
 The framing justification, interpretation of results and limitations are my own.
