@@ -63,7 +63,7 @@ All features are built in `pipeline.engineer_features`. The preprocessor is fitt
 - **Scaling:** numeric features are standardised (needed for gradient descent to converge at one learning rate,
   and makes L2 penalise all features on the same scale). Binary flags are left as 0/1.
 
-Final design matrix: 46 columns.
+Final design matrix: 56 columns.
 
 **TODO (own words):** what didn't work / what I'd tried, and why each choice matters.
 
