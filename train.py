@@ -193,8 +193,18 @@ def main():
             "max_abs_coef_diff_vs_sklearn": float(np.abs(coefs[name] - coefs["sklearn"]).max()),
             "same_decision_share": float(((probas[name]["test"] >= results[name]["threshold"])
                                           == (probas["sklearn"]["test"] >= results["sklearn"]["threshold"])).mean()),
+            # separates "the models disagree" from "threshold selection picked a different value"
+            "same_decision_share_at_sklearn_threshold": float(
+                ((probas[name]["test"] >= results["sklearn"]["threshold"])
+                 == (probas["sklearn"]["test"] >= results["sklearn"]["threshold"])).mean()),
         }
         for name in ("torch_manual", "torch_module")
+    }
+    # validation cost around the chosen thresholds, per model: one student near the
+    # cut-off is enough to move the cost-minimising threshold
+    agreement["val_cost_by_threshold_near_optimum"] = {
+        name: {str(t): business_cost(yva, probas[name]["val"], t)["cost"] for t in (0.10, 0.11, 0.12, 0.13, 0.14)}
+        for name in ("sklearn", "torch_manual", "torch_module")
     }
 
     # --- save models

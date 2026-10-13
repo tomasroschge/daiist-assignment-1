@@ -46,8 +46,8 @@ NUMERIC = [
     "log_age_at_enrollment", "application_order", "parents_higher_ed",
 ]
 BINARY = [
-    "s1_no_grade", "s1_no_evaluations", "s1_has_credits", "tuition_not_up_to_date",
-    "debtor", "scholarship", "mature_student", "evening", "male", "displaced",
+    "s1_no_grade", "s1_no_evaluations", "s1_has_credits",
+    "scholarship", "mature_student", "evening", "male", "displaced",
     "special_needs", "non_portuguese", "not_single",
 ]
 CATEGORICAL = ["course", "application_mode", "prev_qualification"]
@@ -95,9 +95,10 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     out["s1_no_evaluations"] = (evaluations == 0).astype(int)
     out["s1_units_without_eval"] = df[s1("without evaluations")]
     out["s1_has_credits"] = (df[s1("credited")] > 0).astype(int)
-    # financial situation
-    out["tuition_not_up_to_date"] = 1 - df["Tuition fees up to date"]
-    out["debtor"] = df["Debtor"]
+    # financial situation. "Tuition fees up to date" and "Debtor" are NOT used:
+    # the dataset doesn't say when they were recorded, and 94% of students not
+    # up to date are dropouts, so they likely reflect the dropout itself
+    # (a student who left stops paying) rather than precede it.
     out["scholarship"] = df["Scholarship holder"]
     # background at admission
     out["admission_grade"] = df["Admission grade"]

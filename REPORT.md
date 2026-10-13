@@ -50,7 +50,7 @@ All features are built in `pipeline.engineer_features`. The preprocessor is fitt
 - **Grade = 0 is not a grade:** in the raw data a 1st-semester grade of 0 means "nothing approved". `s1_no_grade`
   flags it, the grade itself is set to missing and imputed with the train median. Without this, a linear model
   would treat 0/20 as a real, extreme grade.
-- **Financial:** `tuition_not_up_to_date`, `debtor`, `scholarship`.
+- **Financial:** `scholarship` only (tuition and debtor flags excluded, see *Dropped*).
 - **Background:** `log_age_at_enrollment` (age is right-skewed: median 20, max 70), `mature_student` (≥ 23),
   `application_order`, `parents_higher_ed` (0/1/2, from 29 qualification codes mapped to higher-ed or not),
   `non_portuguese` (97.5 % are Portuguese, so 21 nationality codes collapse to one flag), `not_single`, `evening`,
@@ -59,11 +59,14 @@ All features are built in `pipeline.engineer_features`. The preprocessor is fitt
   with levels that have < 30 train rows grouped into "infrequent" (also catches unseen levels at test time).
 - **Dropped:** all 2nd-semester columns (leakage), the macro columns (cohort identifiers with only 10 values:
   they would learn cohort effects that can't extrapolate to new cohorts), parents' occupations (32 noisy codes each),
-  `International` (duplicate of nationality).
+  `International` (duplicate of nationality), and **`Tuition fees up to date` + `Debtor`**: the data dictionary
+  doesn't say when they were recorded, and 457 of the 486 students not up to date (94 %) are dropouts, so the flag
+  most likely records the dropout (a student who left stops paying) instead of preceding it. With both features the
+  test ROC AUC was 0.909 (tuition was the largest coefficient, +1.57); without them it is 0.895.
 - **Scaling:** numeric features are standardised (needed for gradient descent to converge at one learning rate,
   and makes L2 penalise all features on the same scale). Binary flags are left as 0/1.
 
-Final design matrix: 56 columns.
+Final design matrix: 54 columns.
 
 **TODO (own words):** what didn't work / what I'd tried, and why each choice matters.
 
@@ -76,14 +79,15 @@ on the same standardised train matrix:
 
 This matches sklearn's `0.5·||w||² + C·Σ logloss` divided by `C·n`.
 
-- **scikit-learn:** `LogisticRegression(C=0.1)`, lbfgs. C picked from {0.01 … 10} by validation log loss
-  (0.01 → 0.345, 0.1 → **0.317**, 10 → 0.331).
+- **scikit-learn:** `LogisticRegression(C=0.03)`, lbfgs. C picked from {0.01 … 10} by validation log loss
+  (0.01 → 0.362, 0.03 → **0.353**, 0.1 → 0.353, 10 → 0.372).
 - **Manual PyTorch:** raw tensors `w`, `b`, explicit sigmoid + BCE + L2, `loss.backward()`, and a manual
   `w -= lr·w.grad` step inside `torch.no_grad()`. Full batch, 4,000 epochs.
 - **Standard PyTorch:** `nn.Module` with one `nn.Linear`, `BCEWithLogitsLoss`, and `torch.optim.SGD` with
   `weight_decay=λ` on the weights only. `weight_decay` adds `λ·w` to the gradient, which is the gradient of `λ/2·||w||²`.
 - **Learning rate** (both torch versions): picked from {0.05, 0.1, 0.5, 1.0} by the final training objective,
-  since it is an optimisation setting, not a model setting → 0.5 (0.28936, same as 1.0; 0.05 → 0.28973).
+  since it is an optimisation setting, not a model setting → 1.0 (all four reach 0.33885 within 1e-5 after
+  4,000 epochs).
 
 ### Results on the test cohorts (2016–2017, n = 638, dropout rate 34.3 %)
 
@@ -92,23 +96,30 @@ Threshold chosen on the validation cohorts.
 | Model | ROC AUC | PR AUC | Log loss | Threshold | Recall | Precision | Flagged | Cost (€) | €/student |
 |---|---|---|---|---|---|---|---|---|---|
 | Naive baseline (train rate 0.423) | 0.500 | 0.343 | 0.656 | 0.01 | 1.000 | 0.343 | 100 % | 125,700 | 197 |
-| scikit-learn | 0.909 | 0.901 | 0.312 | 0.13 | 0.881 | 0.615 | 49.2 % | 114,300 | 179 |
-| PyTorch manual loop | 0.909 | 0.901 | 0.311 | 0.13 | 0.881 | 0.615 | 49.2 % | 114,300 | 179 |
-| PyTorch nn.Module + optim | 0.909 | 0.901 | 0.311 | 0.13 | 0.881 | 0.615 | 49.2 % | 114,300 | 179 |
+| scikit-learn | 0.895 | 0.879 | 0.346 | 0.11 | 0.904 | 0.538 | 57.7 % | 114,000 | 179 |
+| PyTorch manual loop | 0.895 | 0.879 | 0.346 | 0.13 | 0.890 | 0.580 | 52.7 % | 114,300 | 179 |
+| PyTorch nn.Module + optim | 0.895 | 0.879 | 0.346 | 0.13 | 0.890 | 0.580 | 52.7 % | 114,300 | 179 |
 | Policy: mentor nobody | – | – | – | – | 0.000 | – | 0 % | 657,000 | 1,030 |
 | Policy: mentor everybody | – | – | – | – | 1.000 | 0.343 | 100 % | 125,700 | 197 |
 
 Agreement with sklearn on the test set:
-- **Manual loop:** max |Δ probability| = 0.0033, max |Δ coefficient| = 0.013, identical decisions for 100 % of students.
-- **nn.Module:** max |Δ probability| = 0.0033, max |Δ coefficient| = 0.013, identical decisions for 100 % of students.
-- **Intercepts:** sklearn −0.471 vs. torch −0.498 for both.
+- **Manual loop and nn.Module:** max |Δ probability| = 0.0009 and max |Δ coefficient| = 0.0018 vs. sklearn. The two
+  torch versions differ from each other by at most 1.2e-7 in probability (float32 precision).
+- **Intercepts:** sklearn −0.185 vs. torch −0.188.
+- **Same decisions as sklearn:** 95.0 % of test students when each model uses its own validation-chosen threshold
+  (0.11 vs 0.13). **100 %** when they use the same threshold (checked at 0.11 and 0.13).
+- **Why the thresholds differ:** on the validation cohorts the cost curve is jagged. At 0.11, sklearn costs €120,900 and
+  torch €123,900. The difference is one FN: exactly one validation student (an actual dropout) gets 0.11013 from
+  sklearn and 0.1098 from torch, so they land on opposite sides of 0.11. At 0.13 the costs are €122,100 and €121,800.
+  That flips the argmin. Logged for all three models in `artifacts/metrics.json`
+  (`agreement.val_cost_by_threshold_near_optimum`) and shown in the dashboard's agreement panel.
 
 Largest coefficients (log-odds, same sign and size in all three):
-- **Increase dropout risk:** `tuition_not_up_to_date` +1.57, `s1_failed_units` +1.18, course 9853 +1.11, `debtor` +0.87.
-- **Decrease dropout risk:** `s1_approval_rate` −0.94, `scholarship` −0.66.
+- **Increase dropout risk:** `s1_failed_units` +1.06, course 9853 +0.57, `mature_student` +0.30, `log_age_at_enrollment` +0.24.
+- **Decrease dropout risk:** `s1_approval_rate` −0.90, `scholarship` −0.50, course 9500 −0.38, `s1_grade` −0.36.
 
-**TODO (own words):** do the three agree, and why the small remaining gap (intercept) exists. Also: the model is
-only €11,400 (9 %) cheaper than mentoring everybody. What that means for the business case.
+**TODO (own words):** do the three agree? Explain the 95 % vs 100 % decision agreement and the small intercept gap.
+Also: the best model is only €11,700 (9 %) cheaper than mentoring everybody. What that means for the business case.
 
 ## Limitations & next steps
 
