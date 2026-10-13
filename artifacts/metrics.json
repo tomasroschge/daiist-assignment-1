@@ -1,0 +1,139 @@
+{
+  "cost_fn": 3000,
+  "cost_fp": 300,
+  "best_C": 0.1,
+  "lambda": 0.004327131112072695,
+  "best_lr": 0.5,
+  "epochs": 4000,
+  "baseline_prevalence": 0.42276070964950235,
+  "val_log_loss_by_C": {
+    "0.01": 0.34498466005397976,
+    "0.03": 0.3252691484243691,
+    "0.1": 0.3166809207565638,
+    "0.3": 0.31752976417234613,
+    "1.0": 0.3221037508634435,
+    "3.0": 0.32628208707401485,
+    "10.0": 0.3313240587978476
+  },
+  "final_train_objective_by_lr": {
+    "0.05": 0.2897343635559082,
+    "0.1": 0.28939351439476013,
+    "0.5": 0.28935569524765015,
+    "1.0": 0.28935569524765015
+  },
+  "sklearn_train_objective": 0.28936000727746575,
+  "intercepts": {
+    "sklearn": -0.47105876645840083,
+    "torch_manual": -0.4983254671096802,
+    "torch_module": -0.4983196556568146
+  },
+  "results_test": {
+    "baseline": {
+      "roc_auc": 0.5,
+      "pr_auc": 0.3432601880877743,
+      "log_loss": 0.656406966558655,
+      "threshold": 0.01,
+      "recall": 1.0,
+      "precision": 0.3432601880877743,
+      "flagged_share": 1.0,
+      "cost_eur": 125700,
+      "cost_per_student_eur": 197.0219435736677,
+      "tp": 219,
+      "fp": 419,
+      "fn": 0,
+      "tn": 0
+    },
+    "sklearn": {
+      "roc_auc": 0.909340569523,
+      "pr_auc": 0.9009256134210805,
+      "log_loss": 0.3115686872063376,
+      "threshold": 0.13,
+      "recall": 0.8812785388127854,
+      "precision": 0.6146496815286624,
+      "flagged_share": 0.49216300940438873,
+      "cost_eur": 114300,
+      "cost_per_student_eur": 179.15360501567397,
+      "tp": 193,
+      "fp": 121,
+      "fn": 26,
+      "tn": 298
+    },
+    "torch_manual": {
+      "roc_auc": 0.909340569523,
+      "pr_auc": 0.9009555216482056,
+      "log_loss": 0.3114857077598572,
+      "threshold": 0.13,
+      "recall": 0.8812785388127854,
+      "precision": 0.6146496815286624,
+      "flagged_share": 0.49216300940438873,
+      "cost_eur": 114300,
+      "cost_per_student_eur": 179.15360501567397,
+      "tp": 193,
+      "fp": 121,
+      "fn": 26,
+      "tn": 298
+    },
+    "torch_module": {
+      "roc_auc": 0.909340569523,
+      "pr_auc": 0.9009555216482056,
+      "log_loss": 0.31148573756217957,
+      "threshold": 0.13,
+      "recall": 0.8812785388127854,
+      "precision": 0.6146496815286624,
+      "flagged_share": 0.49216300940438873,
+      "cost_eur": 114300,
+      "cost_per_student_eur": 179.15360501567397,
+      "tp": 193,
+      "fp": 121,
+      "fn": 26,
+      "tn": 298
+    },
+    "mentor_nobody": {
+      "roc_auc": 0.5,
+      "pr_auc": 0.3432601880877743,
+      "log_loss": 5.532700610438676,
+      "threshold": 0.5,
+      "recall": 0.0,
+      "precision": 0.0,
+      "flagged_share": 0.0,
+      "cost_eur": 657000,
+      "cost_per_student_eur": 1029.780564263323,
+      "tp": 0,
+      "fp": 0,
+      "fn": 219,
+      "tn": 419
+    },
+    "mentor_everybody": {
+      "roc_auc": 0.5,
+      "pr_auc": 0.3432601880877743,
+      "log_loss": 10.58539514086533,
+      "threshold": 0.5,
+      "recall": 1.0,
+      "precision": 0.3432601880877743,
+      "flagged_share": 1.0,
+      "cost_eur": 125700,
+      "cost_per_student_eur": 197.0219435736677,
+      "tp": 219,
+      "fp": 419,
+      "fn": 0,
+      "tn": 0
+    }
+  },
+  "agreement": {
+    "torch_manual": {
+      "max_abs_proba_diff_vs_sklearn": 0.003276294888459763,
+      "max_abs_coef_diff_vs_sklearn": 0.012798315347116798,
+      "same_decision_share": 1.0
+    },
+    "torch_module": {
+      "max_abs_proba_diff_vs_sklearn": 0.003272897423707566,
+      "max_abs_coef_diff_vs_sklearn": 0.01279160237399897,
+      "same_decision_share": 1.0
+    }
+  },
+  "rows": {
+    "train": 2311,
+    "val": 681,
+    "test": 638
+  }
+}
