@@ -146,7 +146,7 @@ Largest coefficients (log-odds, same sign and size in all three):
 
 ### Do the three agree? 
 
-**1. They match:** Probabilities differ by at most 0.0009, coefficients by 0.0018, and the AUC is identical (0.895). The three minimize the loss function (BCE + L2 with lambda = 1/(C-n), without penalizing the bias) over the same data. The problem is convex, so it was a unique optimum.
+**1. They match:** Probabilities differ by at most 0.0009, coefficients by 0.0018, and the AUC is identical (0.895). The three minimize the loss function (BCE + L2 with lambda = 1/(C·n), without penalizing the bias) over the same data. The problem is convex, so it was a unique optimum.
 
 **2. 95% vs 100%:** It is not that the models differ, it is the threshold choice. With the same threshold they make the same decision for 100% of students. Each chose it on validation, and there a single student (who actually dropped out) has 0.11013 in sklearn and 0.1098 in torch. That unique FN of 3000€ changes the optimal threshold from 0.11 to 0.13. This shows how fragile the threshold is in order to choose it with a tiny validation
 
@@ -171,8 +171,10 @@ So, the loss function is almost flat in that direction. Both get to the same los
 
 Claude Code (Anthropic, Claude Opus) was used to:
 - propose and analyse the suitability candidate datasets and cost figures; I chose the dataset, framing and costs;
-- write the code in `pipeline.py`, `train.py` and `app.py`;
+- write the whole code in `pipeline.py`, `train.py` and `app.py`;
 - write the factual/descriptive parts of this report (dataset facts, pipeline description, results tables).
 - build the analytical dashboard
+- Help with gramar corrections
+- Help with organising interpretations of results and understanding them in simple terms in order to write the justifications, framings, validations, results, and limitaitons
 
 The framing justification, interpretation of results and limitations are my own.
